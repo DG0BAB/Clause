@@ -7,16 +7,19 @@
 //
 
 import Foundation
+import PetiteLogger
 
 public protocol ClauseLocalizable: ExpressibleByStringInterpolation {
 	typealias KeyPrefix = (String) -> String?
+
 	/// The resulting string
 	func localization(_ table: String, prefix: KeyPrefix?) -> String
 }
 
+private typealias Log = PetiteLogger.Logger
+
 public struct Clause: ClauseLocalizable {
-	public typealias Logger = (String) -> Void
-	public static var logMessage: Logger  = { print($0) }
+	public static var parameterEscape = "@"
 
 	private let rawKey: String
 	private let parameters: [String : PlaceholderValuePairing]
@@ -34,27 +37,24 @@ public struct Clause: ClauseLocalizable {
 		typealias NamedMatch = (name: String, matchedPattern: String)
 
 		var key = rawKey
-		if let prefix = prefix?(rawKey), !prefix.isEmpty {
+		if let prefix = prefix?(rawKey),
+			!prefix.isEmpty {
 			key = prefix + "." + rawKey
 		}
 		let rawLocalization =  NSLocalizedString(key, tableName: table, value: key, comment: "")
 
 		if rawLocalization == key {
-			let logMsg = "Clause-warning: \(#file) | \(#function) | \(#line) - Key “\(key)” not found in strings file with name “\(table)”."
-			Clause.logMessage(logMsg)
+			Log.warning("Key “\(key)” not found in strings file with name “\(table)”.")
 		}
 		if rawLocalization.isEmpty {
-			let logMsg = "Clause-warning: \(#file) | \(#function) | \(#line) - Value for key “\(key)” is empty in strings file with name “\(table)”."
-			Clause.logMessage(logMsg)
+			Log.warning("Value for key “\(key)” is empty in strings file with name “\(table)”.")
 		}
 
 		// If no interpolations were found in the original string literal, just return the localized string as read from the strings-file
 		guard !parameters.isEmpty else { return rawLocalization	}
 
-		// Regex to find patterns like "\("name:", %@)"
-		let regex = #"\\\((.+?)\)"#
-		guard let regexParser = try? NSRegularExpression(pattern: regex, options: [.caseInsensitive]) else { return rawLocalization }
-
+		// Find patterns like "\("name:", %@)" with a Regular-Expression-Parser
+		guard let regexParser = Self.regexParser else { return rawLocalization }
 		let matches = regexParser.matches(in: rawLocalization, range: NSRange(rawLocalization.startIndex..<rawLocalization.endIndex, in: rawLocalization))
 
 		let namedMatches = matches.compactMap { (textResult) -> NamedMatch? in
@@ -73,9 +73,8 @@ public struct Clause: ClauseLocalizable {
 					return result + "“\(argument.key)”, "
 				}
 				// dropLast(2) to remove the last ", "
-				let logMsg = "Clause-error: \(#file) | \(#function) | \(#line) - Invalid placeholder name “\(namedMatch.name)”. Valid names are: \(validPlaceholdersString.dropLast(2))"
-				Clause.logAssertion(logMsg)
-				return ""
+				Log.error("Invalid placeholder name “\(namedMatch.name)”. Valid names are: \(validPlaceholdersString.dropLast(2))")
+				return rawLocalization
 			}
 			return result.replacingOccurrences(of: namedMatch.matchedPattern, with: placeholder)
 		}
@@ -87,18 +86,16 @@ public struct Clause: ClauseLocalizable {
 		}
 
 		guard namedMatches.count == values.count else  {
-			let logMsg = "Clause-warning: \(#file) | \(#function) | \(#line) - Unmatched number of placeholders and values. Expected “\(namedMatches.count)” got “\(values.count)”"
-			Clause.logAssertion(logMsg)
+			Log.warning("Unmatched number of placeholders and values. Expected “\(namedMatches.count)” got “\(values.count)”")
 			return rawLocalization
 		}
 
 		return String(format: format, arguments: values)
 	}
 
-	private static func logAssertion(_ message: String) {
-		assertionFailure(message)
-		Clause.logMessage(message)
-	}
+	private static let regexParser: NSRegularExpression? = {
+		return try? NSRegularExpression(pattern: #"\\\((.+?)\)"#, options: [.caseInsensitive])
+	}()
 }
 
 extension Clause {
@@ -119,29 +116,28 @@ extension Clause {
 			self.literal.append(contentsOf: literal.lazy.flatMap { $0 == "%" ? "%%" : String($0) })
 		}
 
-		public mutating func appendInterpolation<T: PlaceholderValuePairing>(_ literal: String, _ placeholderValuePair: T) {
-			guard let literal = parseLiteral(literal, placeholder: placeholderValuePair.placeholder) else { return }
-			self.literal.append(literal.placeholder)
-			arguments[literal.name] = placeholderValuePair
+		public mutating func appendInterpolation<T: PlaceholderValuePairing>(_ parameterName: String, _ placeholderValuePair: T) {
+			guard let processedParameterName = processParameterName(parameterName) else { return }
+			self.literal.append(processedParameterName.escapedName)
+			arguments[processedParameterName.trimmedName] = placeholderValuePair
 		}
 
-		public mutating func appendInterpolation<T: PlaceholderValueFormatting>(_ literal: String, _ placeholderValuePair: T, format: T.Style? = nil) {
+		public mutating func appendInterpolation<T: PlaceholderValueFormatting>(_ parameterName: String, _ placeholderValuePair: T, format: T.Style? = nil) {
 			// if a format was given, use the struct instead of the original, because we need to store the style
 			let placeholderWithValue: PlaceholderValuePairing = format == nil ? placeholderValuePair : FormatablePlaceholderValuePair(placeholderValuePair, style: format!)
-			guard let literal = parseLiteral(literal, placeholder: placeholderWithValue.placeholder) else { return }
-			self.literal.append(literal.placeholder)
-			arguments[literal.name] = placeholderWithValue
+			guard let processedParameterName = processParameterName(parameterName) else { return }
+			self.literal.append(processedParameterName.escapedName)
+			arguments[processedParameterName.trimmedName] = placeholderWithValue
 		}
 
-		private func parseLiteral(_ literal: String, placeholder: String) -> (name: String, placeholder: String)? {
-			let name = trimSuffix(":", from: literal)
+		private func processParameterName(_ parameterName: String) -> (trimmedName: String, escapedName: String)? {
+			let name = trimSuffix(":", from: parameterName)
 			guard isUniqueKey(name) else { return nil }
-			return (name: name, placeholder: "\\"+"(\(name))")
+			return (trimmedName: name, escapedName: "\(Clause.parameterEscape)(\(name))")
 		}
 		private func isUniqueKey(_ key: String) -> Bool {
 			guard arguments.index(forKey: key) == nil else {
-				let logMsg:String = "Clause-error: \(#file) | \(#function) | \(#line) - Placeholder names must be unique. Found “\(key)” more than once."
-				Clause.logAssertion(logMsg)
+				Log.error("Placeholder names must be unique. Found “\(key)” more than once.")
 				return false
 			}
 			return true
