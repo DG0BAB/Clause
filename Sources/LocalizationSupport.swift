@@ -8,12 +8,12 @@
 
 import Foundation
 
-public protocol TableNameProviding {
-	static var tableName: String { get }
+public protocol StringsFileNameProviding {
+	static var baseStringsFileName: String { get }
 }
 
-extension TableNameProviding {
-	public static var tableName: String {
+extension StringsFileNameProviding {
+	public static var baseStringsFileName: String {
 		return "Localizable"
 	}
 }
