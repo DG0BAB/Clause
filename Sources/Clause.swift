@@ -94,7 +94,7 @@ public struct Clause: ClauseLocalizable {
 	}
 
 	private static let regexParser: NSRegularExpression? = {
-		return try? NSRegularExpression(pattern: #"\\\((.+?)\)"#, options: [.caseInsensitive])
+		return try? NSRegularExpression(pattern: "\(Self.parameterEscape)"+#"\((.+?)\)"#, options: [.caseInsensitive])
 	}()
 }
 
