@@ -22,12 +22,19 @@ private typealias Log = PetiteLogger.Logger
 
 postfix operator ^
 
+
+extension String {
+	public static postfix func ^ (string: String) -> Clause {
+		return Clause(stringLiteral: string)
+	}
+}
+
 public struct Clause: ClauseLocalizable {
 	
 	public static postfix func ^ (clause: Clause) -> Clause {
 		return clause
 	}
-	
+
 	public static var parameterEscape = "@"
 
 	private let rawKey: String
