@@ -9,7 +9,7 @@
 import Foundation
 import PetiteLogger
 
-public protocol ClauseLocalizable: ExpressibleByStringInterpolation {
+public protocol ClauseLocalizable {
 	typealias KeyPrefix = (String) -> String?
 
 	var localized: String { get }
@@ -20,19 +20,61 @@ public protocol ClauseLocalizable: ExpressibleByStringInterpolation {
 
 private typealias Log = PetiteLogger.Logger
 
+prefix operator ^
 postfix operator ^
+infix operator ^<
 
 
 extension String {
-	public static postfix func ^ (string: String) -> Clause {
-		return Clause(stringLiteral: string)
+
+	/// Turns any string object or literal to the right (the right operand) into a `Clause`
+	/// - Parameter right: String object or literal
+	/// - Returns: The `Clause` that was constructed from the string
+	public static prefix func ^ (right: String) -> Clause {
+		return Clause(stringLiteral: right)
+	}
+
+	/// Turns any string object or literal to the left (the left operand) into a `Clause` and calls `localized` on that `Clause`
+	///
+	/// The localized string is taken from the default "Localizable.strings" file
+	/// - Parameter left: String object or literal
+	/// - Returns: The localized string or the original string if no localization was found
+	public static postfix func ^ (left: String) -> String {
+		return Clause(stringLiteral: left).localized
+	}
+
+	/// Turns any string object or literal to the left (the left operand) into a `Clause` and calls `localized` on that `Clause`
+	///
+	/// The localized string is taken from a .strings file which name is given by the right operand.
+	/// - Parameters:
+	///   - left: String object or literal
+	///   - right: Name of a .strings file
+	/// - Returns: The localized string or the original string if no localization was found
+	public static func ^< (left: String, right: String) -> String {
+		return Clause(stringLiteral: left).localized(right)
 	}
 }
 
-public struct Clause: ClauseLocalizable {
+public struct Clause: ClauseLocalizable, ExpressibleByStringInterpolation {
 	
-	public static postfix func ^ (clause: Clause) -> Clause {
-		return clause
+	/// Calls `localized` on the `Clause` to the left of the operator
+	///
+	/// The localized string is taken from the default "Localizable.strings" file
+	/// - Parameter left: A `Clause` object or literal
+	/// - Returns: The localized string or the original string from the `Clause` if no localization was found
+	public static postfix func ^ (clause: Clause) -> String {
+		return clause.localized
+	}
+
+	/// Calls `localized` on the `Clause` to the left of the operator
+	///
+	/// The localized string is taken from a .strings file which name is given by the right operand.
+	/// - Parameters:
+	///   - left: String object or literal
+	///   - right: Name of a .strings file
+	/// - Returns: The localized string or the original string from the `Clause` if no localization was found
+	public static func ^< (left: Clause, right: String) -> String {
+		return left.localized(right)
 	}
 
 	public static var parameterEscape = "@"
