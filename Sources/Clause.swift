@@ -15,7 +15,7 @@ public protocol ClauseLocalizable {
 	var localized: String { get }
 	
 	/// The resulting string
-	func localized(_ table: String, prefix: KeyPrefix?) -> String
+	func localized(_ stringsFileName: String, bundle: Bundle, prefix: KeyPrefix?) -> String
 }
 
 private typealias Log = PetiteLogger.Logger
@@ -95,7 +95,7 @@ public struct Clause: ClauseLocalizable, ExpressibleByStringInterpolation {
 		return localized()
 	}
 	
-	public func localized(_ table: String = "Localizable", prefix: KeyPrefix? = nil) -> String {
+	public func localized(_ stringsFileName: String = "Localizable", bundle: Bundle = Bundle.main, prefix: KeyPrefix? = nil) -> String {
 		typealias NamedMatch = (name: String, matchedPattern: String)
 
 		var key = rawKey
@@ -103,14 +103,14 @@ public struct Clause: ClauseLocalizable, ExpressibleByStringInterpolation {
 			!prefix.isEmpty {
 			key = prefix + "." + rawKey
 		}
-		var rawLocalization =  NSLocalizedString(key, tableName: table, value: "<<D.E.F.A.U.L.T>>", comment: "")
+		var rawLocalization =  NSLocalizedString(key, tableName: stringsFileName, bundle: bundle, value: "<<D.E.F.A.U.L.T>>", comment: "")
 
 		if rawLocalization == "<<D.E.F.A.U.L.T>>" {
-			Log.warning("Key “\(key)” not found in strings file with name “\(table)”.")
+			Log.warning("Key “\(key)” not found in strings file with name “\(stringsFileName)”.")
 			rawLocalization = key
 		}
 		if rawLocalization.isEmpty {
-			Log.warning("Value for key “\(key)” is empty in strings file with name “\(table)”.")
+			Log.warning("Value for key “\(key)” is empty in strings file with name “\(stringsFileName)”.")
 		}
 
 		// If no interpolations were found in the original string literal, just return the localized string as read from the strings-file
