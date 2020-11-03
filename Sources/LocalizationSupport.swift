@@ -8,12 +8,21 @@
 
 import Foundation
 
-public protocol StringsFileNameProviding {
-	static var baseStringsFileName: String { get }
+public protocol LocalizationMetadataProviding {
+	/// The strings file the localizations are stored in
+	/// Defaults to `Localizable`.string
+	static var stringsFileName: String { get }
+
+	/// The `Bundle` the strings file is stored in
+	/// Defaults to the main Bundle of the module
+	static var bundle: Bundle { get }
 }
 
-extension StringsFileNameProviding {
-	public static var baseStringsFileName: String {
+extension LocalizationMetadataProviding {
+	public static var stringsFileName: String {
 		return "Localizable"
+	}
+	public static var bundle: Bundle {
+		return Bundle.main
 	}
 }
