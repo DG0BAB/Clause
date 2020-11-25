@@ -155,7 +155,7 @@ extension Int: PlaceholderValueFormatting {
 
 // Make `Float` values formatable
 extension Float: PlaceholderValueFormatting {
-	/// `Int` uses the `NumberFormatter.Style`
+	/// `Float` uses the `NumberFormatter.Style`
 	public typealias Style = NumberFormatter.Style
 
 	/// Placeholder for formated `Float` is %@ instead of %f.
