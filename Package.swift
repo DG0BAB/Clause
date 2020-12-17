@@ -14,7 +14,8 @@ package.products = [.library(name: packageName, targets: [packageName])]
 package.platforms = [.iOS(.v13), .macOS(.v10_15)]
 
 package.dependencies = [
-	.package(name: "PetiteLogger", path: "../../PetiteLogger/PLPackage")
+	.package(url: "git@github.com:DG0BAB/PetiteLogger.git", .branch("master"))
+	//.package(name: "PetiteLogger", path: "../../PetiteLogger/PLPackage")
 ]
 
 let targetDependencies: [Target.Dependency] = [
