@@ -42,6 +42,15 @@ extension Date: PlaceholderValuePairing {
 	public var value: CVarArg { return String(describing: self) }
 }
 
+// Extend `UUID` to conform to `PlaceholderValuePairing`
+extension UUID: PlaceholderValuePairing {
+	/// Returns `%@`
+	public var placeholder: String { return "%@" }
+
+	/// Return a `String` describing this `Date` as a `CVarArg`
+	public var value: CVarArg { return self.uuidString }
+}
+
 // Extend `Int` to conform to `PlaceholderValuePairing`
 extension Int: PlaceholderValuePairing {
 	/// Returns `%d`
