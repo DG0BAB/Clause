@@ -3,7 +3,7 @@
     "pins": [
       {
         "package": "PetiteLogger",
-        "repositoryURL": "git@github.com:DG0BAB/PetiteLogger.git",
+        "repositoryURL": "https://github.com/DG0BAB/PetiteLogger.git",
         "state": {
           "branch": "master",
           "revision": "797d97fe8dc8876e4da393bd51ff16a0e0b44f29",
